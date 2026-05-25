@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crude Oil Analysis — Schwartz & Smith</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #0B1628;
+    --deep:   #0F1E35;
+    --card:   #132236;
+    --accent: #C8973A;
+    --gold2:  #E8B85A;
+    --red:    #C0392B;
+    --text:   #E8E2D4;
+    --muted:  #7A8A9A;
+    --border: rgba(200,151,58,0.18);
+    --glow:   rgba(200,151,58,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--navy);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRAIN OVERLAY ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  /* ── HERO HEADER ────────────────────────────────────── */
+  header {
+    position: relative; z-index: 1;
+    padding: 64px 60px 40px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(200,151,58,0.04) 0%, transparent 100%);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 18px; }
+
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--accent), var(--gold2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 24px rgba(200,151,58,0.3);
+    flex-shrink: 0;
+  }
+
+  .logo-text { font-family: 'DM Mono', monospace; }
+  .logo-text .firm { font-size: 11px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; }
+  .logo-text .product { font-size: 15px; font-weight: 500; color: var(--text); }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    background: var(--glow);
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #22ab94;
+    box-shadow: 0 0 6px #22ab94;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 7vw, 96px);
+    line-height: 0.92;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    animation: fadeUp 0.8s ease both;
+  }
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+    animation: fadeUp 0.8s 0.15s ease both;
+  }
+
+  /* ── METRICS BAR ────────────────────────────────────── */
+  .metrics-bar {
+    display: flex; gap: 40px; flex-wrap: wrap;
+    padding: 28px 60px;
+    border-bottom: 1px solid var(--border);
+    background: var(--deep);
+    position: relative; z-index: 1;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .metric { display: flex; flex-direction: column; gap: 4px; }
+  .metric-label { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+  .metric-value { font-size: 20px; font-weight: 500; color: var(--text); font-family: 'DM Mono', monospace; }
+  .metric-value.gold { color: var(--accent); }
+  .metric-value.green { color: #22ab94; }
+  .metric-value.red { color: var(--red); }
+  .metric-sep { width: 1px; background: var(--border); align-self: stretch; }
+
+  /* ── MAIN GRID ──────────────────────────────────────── */
+  main {
+    position: relative; z-index: 1;
+    padding: 48px 60px 80px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+
+  /* ── CARD ───────────────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    text-decoration: none;
+    display: flex; flex-direction: column;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    animation: fadeUp 0.6s ease both;
+    cursor: pointer;
+  }
+  .card:nth-child(1) { animation-delay: 0.1s; }
+  .card:nth-child(2) { animation-delay: 0.15s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+  .card:nth-child(4) { animation-delay: 0.25s; }
+  .card:nth-child(5) { animation-delay: 0.3s; }
+  .card:nth-child(6) { animation-delay: 0.35s; }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 40px rgba(200,151,58,0.12);
+  }
+
+  .card-header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .card-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    line-height: 1;
+    color: var(--border);
+    min-width: 36px;
+    transition: color 0.25s;
+  }
+  .card:hover .card-num { color: var(--accent); }
+
+  .card-icon {
+    width: 38px; height: 38px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .card-meta { flex: 1; }
+  .card-tag {
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 500;
+    color: var(--text); line-height: 1.3;
+  }
+
+  .card-body { padding: 18px 22px 20px; flex: 1; }
+  .card-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  .card-footer {
+    padding: 12px 22px;
+    background: rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-badge {
+    font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 3px 8px;
+    border-radius: 2px; font-weight: 500;
+  }
+  .badge-interactive { background: rgba(34,171,148,0.15); color: #22ab94; }
+  .badge-risk        { background: rgba(192,57,43,0.15);  color: #E74C3C; }
+  .badge-model       { background: rgba(200,151,58,0.15); color: var(--accent); }
+  .badge-export      { background: rgba(122,138,154,0.15);color: var(--muted); }
+
+  .card-arrow {
+    font-size: 14px; color: var(--muted);
+    transition: transform 0.2s, color 0.2s;
+  }
+  .card:hover .card-arrow { transform: translateX(4px); color: var(--accent); }
+
+  /* ── CSV SECTION ────────────────────────────────────── */
+  .csv-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .csv-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    text-decoration: none;
+    display: flex; align-items: center; gap: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .csv-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(200,151,58,0.1);
+  }
+
+  .csv-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .csv-info { flex: 1; }
+  .csv-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .csv-desc { font-size: 11px; color: var(--muted); }
+
+  .csv-dl {
+    font-size: 18px; color: var(--muted);
+    transition: color 0.2s;
+  }
+  .csv-card:hover .csv-dl { color: var(--accent); }
+
+  /* ── FOOTER ─────────────────────────────────────────── */
+  footer {
+    position: relative; z-index: 1;
+    padding: 24px 60px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .footer-left { font-size: 11px; color: var(--muted); font-family: 'Playfair Display', serif; font-style: italic; }
+  .footer-right { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
+
+  /* ── ANIMATIONS ─────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── RESPONSIVE ─────────────────────────────────────── */
+  @media (max-width: 700px) {
+    header, main, footer, .metrics-bar { padding-left: 24px; padding-right: 24px; }
+    .csv-grid { grid-template-columns: 1fr; }
+    .metrics-bar { gap: 20px; }
+    .metric-sep { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-top">
+    <div class="logo-area">
+      <div class="logo-icon">🛢</div>
+      <div class="logo-text">
+        <div class="firm">Quantitative Research</div>
+        <div class="product">Oil Market Intelligence</div>
+      </div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      ANALYSE COMPLÈTE
+    </div>
+  </div>
+  <h1>CRUDE OIL<br><span>STRATEGIC</span><br>ANALYSIS</h1>
+  <p class="subtitle">Modèle Schwartz & Smith (2000) — Two-Factor Kalman-MLE — WTI Futures</p>
+</header>
+
+<!-- METRICS BAR -->
+<div class="metrics-bar">
+  <div class="metric">
+    <span class="metric-label">Période</span>
+    <span class="metric-value">2000 – 2026</span>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <span class="metric-label">Observations</span>
+    <span class="metric-value gold">6 551</span>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <span class="metric-label">Facteurs</span>
+    <span class="metric-value">χ + ξ</span>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <span class="metric-label">Simulations MC</span>
+    <span class="metric-value green">500</span>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <span class="metric-label">Horizon</span>
+    <span class="metric-value">12 mois</span>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <span class="metric-label">Dashboards</span>
+    <span class="metric-value gold">6</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+  <div class="section-label">Dashboards interactifs</div>
+
+  <div class="grid">
+
+    <!-- 01 -->
+    <a class="card" href="outputs/01_candlestick.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">01</span>
+        <div class="card-icon" style="background:rgba(34,171,148,0.12);">📊</div>
+        <div class="card-meta">
+          <div class="card-tag">Prix de Marché</div>
+          <div class="card-title">Candlestick & Volume</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Graphique en bougies japonaises du WTI Crude Oil avec overlay volume. OHLCV complet sur 26 ans de données futures.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-interactive">Interactif</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- 02 -->
+    <a class="card" href="outputs/02_decomposition.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">02</span>
+        <div class="card-icon" style="background:rgba(200,151,58,0.12);">⚗️</div>
+        <div class="card-meta">
+          <div class="card-tag">Modèle Principal</div>
+          <div class="card-title">Décomposition Schwartz-Smith</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Séparation du prix en équilibre fondamental (ξ) et composante cyclique (χ). Filtre de Kalman + calibration MLE complète.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-model">Modèle Core</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- 03 -->
+    <a class="card" href="outputs/03_forecast_12m.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">03</span>
+        <div class="card-icon" style="background:rgba(41,98,255,0.12);">🔮</div>
+        <div class="card-meta">
+          <div class="card-tag">Prévision</div>
+          <div class="card-title">Scénarios 12 Mois</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Fan chart Monte Carlo avec 500 trajectoires simulées. Intervalles de confiance P10/P50/P90 sur un horizon d'un an.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-interactive">Monte Carlo</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- 04 -->
+    <a class="card" href="outputs/04_risk_profile.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">04</span>
+        <div class="card-icon" style="background:rgba(192,57,43,0.12);">📉</div>
+        <div class="card-meta">
+          <div class="card-tag">Gestion des Risques</div>
+          <div class="card-title">Profil de Risque & VaR</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Value-at-Risk 95%, CVaR (Expected Shortfall), distribution finale des prix simulés et probabilité de convergence.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-risk">Risk Analytics</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- 05 -->
+    <a class="card" href="outputs/05_stress_test.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">05</span>
+        <div class="card-icon" style="background:rgba(192,57,43,0.12);">⚡</div>
+        <div class="card-meta">
+          <div class="card-tag">Scénario Extrême</div>
+          <div class="card-title">Stress Test Géopolitique</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Simulation d'un choc +30% avec volatilité amplifiée (×1.5). Comparaison de la vitesse de retour à l'équilibre en période de crise.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-risk">Stress Test</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- 06 -->
+    <a class="card" href="outputs/06_backtest.html" target="_blank">
+      <div class="card-header">
+        <span class="card-num">06</span>
+        <div class="card-icon" style="background:rgba(122,138,154,0.12);">✅</div>
+        <div class="card-meta">
+          <div class="card-tag">Validation</div>
+          <div class="card-title">Backtest du Modèle</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Comparaison prix réel vs estimation du modèle. Analyse des résiduels et calcul du RMSE pour valider la précision de calibration.</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-badge badge-model">RMSE & Résidus</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- CSV SECTION -->
+  <div class="section-label">Exports données</div>
+
+  <div class="csv-grid">
+    <a class="csv-card" href="outputs/PowerBI_Oil_TimeSeries.csv" download>
+      <div class="csv-icon">📈</div>
+      <div class="csv-info">
+        <div class="csv-name">PowerBI_Oil_TimeSeries.csv</div>
+        <div class="csv-desc">Série temporelle complète — Historique + Prévisions BAU + Stress Test</div>
+      </div>
+      <div class="csv-dl">⬇</div>
+    </a>
+
+    <a class="csv-card" href="outputs/PowerBI_Oil_Metrics.csv" download>
+      <div class="csv-icon">📋</div>
+      <div class="csv-info">
+        <div class="csv-name">PowerBI_Oil_Metrics.csv</div>
+        <div class="csv-desc">KPIs calibrés — κ, demi-vie, VaR, CVaR, probabilité de convergence</div>
+      </div>
+      <div class="csv-dl">⬇</div>
+    </a>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">Schwartz, E. S. & Smith, J. E. (2000). Short-Term Variations and Long-Term Dynamics in Commodity Prices. <em>Management Science, 46</em>(7), 893–911.</div>
+  <div class="footer-right">KALMAN-MLE ENGINE · WTI CRUDE OIL · 2000–2026</div>
+</footer>
+
+</body>
+</html>
