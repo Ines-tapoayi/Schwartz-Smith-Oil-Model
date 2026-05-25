@@ -1,15 +1,3 @@
-"""
-=============================================================================
-  CRUDE OIL STRATEGIC ANALYSIS — SCHWARTZ & SMITH TWO-FACTOR MODEL
-  Kalman Filter + MLE Calibration + Monte Carlo + Stress Test
-=============================================================================
-  Auteur : Ines TAPOAYI
-    Date   : Février 2026
-  Modèle : Schwartz & Smith (2000) — "Short-Term Variations and Long-Term
-           Dynamics in Commodity Prices", Management Science 46(7).
-=============================================================================
-"""
-
 import sys
 import os
 import warnings
@@ -25,9 +13,8 @@ from plotly.subplots import make_subplots
 from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  CONFIGURATION GLOBALE
-# ─────────────────────────────────────────────────────────────────────────────
+
+##  CONFIGURATION GLOBALE
 DATA_FILE   = "Db_CL.xlsx"
 OUTPUT_DIR  = "outputs"
 PILIERS_JOURS = np.array([20, 40, 60])
@@ -47,9 +34,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 np.random.seed(42)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  1. CHARGEMENT ET NETTOYAGE DES DONNÉES
-# ─────────────────────────────────────────────────────────────────────────────
+##  1. CHARGEMENT ET NETTOYAGE DES DONNÉES
 def load_and_clean(filepath: str) -> pd.DataFrame:
     print(f"[1/8] Chargement : {filepath}")
     df = pd.read_excel(filepath)
@@ -78,9 +63,7 @@ def load_and_clean(filepath: str) -> pd.DataFrame:
     return df
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  2. CONSTRUCTION DES PILIERS FIXES (M20 / M40 / M60) PAR INTERPOLATION
-# ─────────────────────────────────────────────────────────────────────────────
+##  2. CONSTRUCTION DES PILIERS FIXES (M20 / M40 / M60) PAR INTERPOLATION
 def build_piliers(df: pd.DataFrame) -> pd.DataFrame:
     print("[2/8] Construction des piliers fixes (M20 / M40 / M60)…")
     df = df.dropna(subset=["Mat_jours", "Close"]).copy()
@@ -116,9 +99,7 @@ def build_piliers(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  3. FILTRE DE KALMAN — SCHWARTZ & SMITH
-# ─────────────────────────────────────────────────────────────────────────────
+##  3. FILTRE DE KALMAN — SCHWARTZ & SMITH
 def schwartz_smith_kalman(params, prices_mat, taus, dt):
     """
     Filtre de Kalman vectorisé pour le modèle 2-facteurs Schwartz & Smith.
@@ -191,9 +172,7 @@ def schwartz_smith_kalman(params, prices_mat, taus, dt):
     return states, log_lik
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  4. FONCTION DE LOG-VRAISEMBLANCE (MAXIMISATION MLE)
-# ─────────────────────────────────────────────────────────────────────────────
+##  4. FONCTION DE LOG-VRAISEMBLANCE (MAXIMISATION MLE)
 def neg_log_likelihood(params, prices_mat, taus, dt):
     """Minimiser l'opposé de la log-vraisemblance = maximiser la LV."""
     kappa, s_chi = params[0], params[1]
@@ -207,13 +186,10 @@ def neg_log_likelihood(params, prices_mat, taus, dt):
         return 1e15
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  5. CALIBRATION MLE
-# ─────────────────────────────────────────────────────────────────────────────
+##  5. CALIBRATION MLE
 def calibrate(prices_mat, taus, dt):
     print("[3/8] Calibration MLE (L-BFGS-B)…")
 
-    
     x0 = [2.5, 0.25, 0.15, 0.30, 0.04, 0.0, 0.0, 0.04]
     bounds = [
         (1.5, 4.0),   # kappa 
@@ -249,9 +225,7 @@ def calibrate(prices_mat, taus, dt):
     return params
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  6. EXTRACTION DES ÉTATS ET MÉTRIQUES
-# ─────────────────────────────────────────────────────────────────────────────
+##  6. EXTRACTION DES ÉTATS ET MÉTRIQUES
 def extract_states(params, prices_mat, taus, dt):
     print("[4/8] Extraction des états (filtre de Kalman final)…")
     states, ll = schwartz_smith_kalman(params, prices_mat, taus, dt)
@@ -271,9 +245,7 @@ def extract_states(params, prices_mat, taus, dt):
     return states, spot_smooth, long_term, half_life_d
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  7. SIMULATION DE MONTE CARLO
-# ─────────────────────────────────────────────────────────────────────────────
+##  7. SIMULATION DE MONTE CARLO
 def monte_carlo(params, states, horizon, n_sims, dt, start_date):
     print(f"[5/8] Simulation Monte Carlo ({n_sims} trajectoires, {horizon}j)…")
     kappa, s_chi, s_xi = params[0], params[1], params[2]
@@ -296,9 +268,7 @@ def monte_carlo(params, states, horizon, n_sims, dt, start_date):
     return paths, forecast_dates, p10, p50, p90
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  8. STRESS TEST
-# ─────────────────────────────────────────────────────────────────────────────
+##  8. STRESS TEST
 def stress_test(params, states, horizon, n_sims, dt, shock=0.30, vol_mult=1.5):
     print("[6/8] Stress test (choc géopolitique +30%)…")
     kappa_s = params[0] * 0.7          # marché plus inerte
@@ -322,9 +292,7 @@ def stress_test(params, states, horizon, n_sims, dt, shock=0.30, vol_mult=1.5):
     return stress_paths, hl_stress
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  9. VISUALISATIONS
-# ─────────────────────────────────────────────────────────────────────────────
+##  9. VISUALISATIONS
 EVENTS = {
     "2008-07-03": "PIC SPÉCULATIF",
     "2014-11-27": "CHOC OPEP",
@@ -590,9 +558,7 @@ def save_all_figs(figs_dict: dict):
         print(f"    ✓ {path}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  10. EXPORT POWER BI / EXCEL
-# ─────────────────────────────────────────────────────────────────────────────
+##  10. EXPORT POWER BI / EXCEL
 def export_powerbi(dates, prices_mat, spot_smooth, long_term,
                    forecast_dates, p10, p50, p90,
                    stress_paths, params, half_life_d):
@@ -646,9 +612,8 @@ def export_powerbi(dates, prices_mat, spot_smooth, long_term,
     print(f"    ✓ {m_path}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  PIPELINE PRINCIPAL
-# ─────────────────────────────────────────────────────────────────────────────
+##  PIPELINE PRINCIPAL
+
 def main():
     print("=" * 70)
     print("  CRUDE OIL ANALYSIS — SCHWARTZ & SMITH TWO-FACTOR MODEL")
